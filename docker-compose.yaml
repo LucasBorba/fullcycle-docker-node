@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: node
+    container_name: app
+    entrypoint: dockerize -wait tcp://db:3306 -timeout 20s docker-entrypoint.sh #Espera o serviço de banco subir
+    command: bash -c "npm install && node index.js" #instala dependencias e inicia o aplicativo
+    networks:
+      - node-nginx-network
+    volumes:
+      - ./node:/usr/src/app
+    tty: true
+    depends_on:
+      - db
+    
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile.prod
+    image: lucasborba/nginx:prod
+    container_name: nginx
+    networks:
+      - node-nginx-network
+    ports:
+      - "8080:80"
+
+  db:
+    image: mysql:5.7
+    command: --innodb-use-native-aio=0
+    container_name: db
+    restart: always #se o container cair, reinicia automaticamente
+    tty: true #permite que entre no container e digite comandos
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=borba
+    networks:
+      - node-nginx-network
+
+networks: 
+  node-nginx-network:
+    driver: bridge
+
+#docker-compose up -d
+#docker-compose down 
+#docker-compose up -d --build
